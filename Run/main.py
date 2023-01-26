@@ -3,7 +3,7 @@
 import bme280
 import serial
 import micropyGPS
-import threading
+import threading 
 import time
 import RPi.GPIO as GPIO
 import busio
@@ -12,9 +12,14 @@ import adafruit_amg88xx
 import picamera
 import cv2
 import numpy as np
+import logging
+import sys
+import time
+
+from Adafruit_BNO055 import BNO055
 
 
-
+bno = BNO055.BNO055(rst=18)
 GPIO.setmode(GPIO.BCM) #GPIO番号で指定
 #GPIO.setmode(GPIO.BOARD) #Pin番号で指定
 gpio_sensor = 24 #GPIO番号で指定
@@ -66,13 +71,23 @@ while True:
         press = list[0]
         temp = list[1]
         hum = list[2]
+        
+        #kakudo
+        heading, roll, pitch = bno.read_euler()
+        sys, gyro, accel, mag = bno.get_calibration_status()
+        print('Heading={0:0.2F} Roll={1:0.2F} Pitch={2:0.2F}\tSys_cal={3} Gyro_cal={4} Accel_cal={5} Mag_cal={6}'.format(
+            heading, roll, pitch, sys, gyro, accel, mag))
+
+
 
         with open('test.txt', 'a', encoding='utf-8') as f:
-            f.write('緯度経度: %2.8f, %2.8f' % (gps.latitude[0], gps.longitude[0]))
-            f.write('海抜: %f' % gps.altitude)
-            f.write("temp = " + temp + " ℃")
-            f.write("hum = " + hum + " %")
-            f.write("press = " + press + " hPa")
+            f.write('緯度経度: %2.8f, %2.8f\n' % (gps.latitude[0], gps.longitude[0]))
+            f.write('海抜: %f\n' % gps.altitude)
+            f.write("temp = " + temp + " ℃\n")
+            f.write("hum = " + hum + " %\n")
+            f.write("press = " + press + " hPa\n")
+            f.write('Heading={0:0.2F} Roll={1:0.2F} Pitch={2:0.2F}\tSys_cal={3} Gyro_cal={4} Accel_cal={5} Mag_cal={6}\n'.format(
+            heading, roll, pitch, sys, gyro, accel, mag))
         print ("temp = " + temp + " ℃")
         print ("hum = " + hum + " %")
         print ("press = " + press + " hPa")
@@ -89,18 +104,20 @@ while True:
 
         # 8x8の表示
         print(sensor.pixels)
-        print('')
+        with open('test.txt', 'a', encoding='utf-8') as f:
+            #txt = ','.join(str(sensor.pixels))
+            f.write(str(sensor.pixels))
+            
         with picamera.PiCamera() as camera:
             camera.resolution = (640, 480)
             camera.start_preview()
             time.sleep(1)
             camera.capture('(1).jpg')
-        '''    
         #CASCADE_FIlE
         # 画像の読み込み + グレースケール化
-        img = cv2.imread("/home/pi/Template_matching/(9).jpg")
+        img = cv2.imread("/home/pi/Run/(9).jpg")
         img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        template = cv2.imread("/home/pi/Template_matching/(10).jpg")
+        template = cv2.imread("/home/pi/Run/(10).jpg")
         template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
 
         # 処理対象画像に対して、テンプレート画像との類似度を算出する
@@ -120,6 +137,7 @@ while True:
             cv2.rectangle(img, pt, (pt[0] + w, pt[1] + h), (0, 0, 255), 2)
 
         # 画像の保存
-        cv2.imwrite("/home/pi/Template_matching/result.jpg", img)
-        '''
+        cv2.imwrite("/home/pi/result.jpg", img)
+        print("")
+
     time.sleep(1.0)
